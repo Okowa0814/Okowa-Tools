@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <title>多直播觀看工具 Made by Okowa</title>
+  <style>
+    body {
+      background: #000;
+      color: #eee;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #allStreamsContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 1550px;
+      gap: 15px;
+    }
+    #topRow {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 120%;
+      margin-top: 100px;
+    }
+    #bottomRow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 120%;
+    }
+
+    .stream-wrapper {
+      position: relative;
+      background: #2c2c2c;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .top-large,
+    .bottom-small {
+      aspect-ratio: 16 / 9;
+    }
+
+    .stream-wrapper iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .add-button {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      cursor: pointer;
+      background: none;
+      border: 2px dashed #777;
+      color: #aaa;
+      border-radius: 10px;
+      transition: .2s;
+    }
+    .add-button:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+
+    .stream-input {
+      position: absolute;
+      inset: 10px;
+      display: flex;
+      flex-direction: column;
+      z-index: 2;
+    }
+    .stream-input input {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #333;
+      color: #eee;
+      font-size: 14px;
+    }
+
+    .close-button {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #ff5555;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 5;
+      display: none;
+    }
+    .chat-button {
+      position: absolute;
+      top: 6px;
+      right: 36px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 13px;
+      cursor: pointer;
+      z-index: 5;
+      display: none;
+    }
+
+    .stream-wrapper.active .close-button,
+    .stream-wrapper.active .chat-button {
+      display: block;
+    }
+
+    /* 聊天彈窗（局部顯示在影片右側） */
+    .chat-popup {
+      position: absolute;
+      top: 10px;
+      left: 800px;
+      width: 400px;
+      height: 700px;
+      background: rgba(20, 20, 20, 0.95);
+      border: 1px solid #555;
+      border-radius: 10px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+    .chat-popup iframe {
+      flex: 1;
+      border: none;
+    }
+    .chat-popup .chat-close {
+      background: #ff5555;
+      color: white;
+      border: none;
+      align-self: flex-end;
+      margin: 5px;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* 頂部置中時鐘 */
+    #topClock {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #eee;
+      background: rgba(0,0,0,0.45);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 3em;
+      font-weight: 600;
+      z-index: 4;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+      -webkit-user-select: none;
+      user-select: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      margin-top: 20px;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="topClock" aria-live="polite">--:--</div>
+  <div id="allStreamsContainer">
+    <div id="topRow"></div>
+    <div id="bottomRow"></div>
+  </div>
+
+  <script>
+    const topRow = document.getElementById('topRow');
+    const bottomRow = document.getElementById('bottomRow');
+    const STORAGE_KEY = 'multiLiveSlots_HorizontalV1';
+    const TOTAL_SLOTS = 6;
+    const slotClasses = [
+      'top-large', 'top-large',
+      'bottom-small', 'bottom-small', 'bottom-small', 'bottom-small'
+    ];
+
+    let savedSlots = JSON.parse(localStorage.getItem(STORAGE_KEY)) || Array(TOTAL_SLOTS).fill('');
+
+    function buildUI() {
+      topRow.innerHTML = '';
+      bottomRow.innerHTML = '';
+      for (let i = 0; i < TOTAL_SLOTS; i++) {
+        const wrapper = createSlot(i, savedSlots[i]);
+        if (i < 2) topRow.appendChild(wrapper);
+        else bottomRow.appendChild(wrapper);
+      }
+    }
+
+    function createSlot(index, videoId) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `stream-wrapper ${slotClasses[index]}`;
+
+      if (!videoId) {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-button';
+        addBtn.textContent = '+';
+        addBtn.onclick = () => enterInputMode(wrapper, index);
+        wrapper.appendChild(addBtn);
+
+        if (index === 1) { // 只給第二個大播放器
+          const splitBtn = document.createElement('button');
+          splitBtn.className = 'split-button';
+          splitBtn.textContent = '🔀';
+          splitBtn.style.position = 'absolute';
+          splitBtn.style.top = '6px';
+          splitBtn.style.left = '6px';
+          splitBtn.style.background = '#555';
+          splitBtn.style.color = '#fff';
+          splitBtn.style.border = 'none';
+          splitBtn.style.borderRadius = '6px';
+          splitBtn.style.padding = '3px 6px';
+          splitBtn.style.cursor = 'pointer';
+          splitBtn.style.zIndex = 5;
+          splitBtn.style.width = '30px'
+          splitBtn.style.height = '30px'
+          splitBtn.onclick = () => splitLargeToSmall(wrapper, videoId, index);
+          wrapper.appendChild(splitBtn);
+        }
+      } else {
+        showVideo(wrapper, videoId, index);
+      }
+
+      return wrapper;
+    }
+
+    function splitLargeToSmall(wrapper, videoId, index) {
+      // 清空原大播放器內容
+      wrapper.innerHTML = '';
+      wrapper.className = 'stream-wrapper top-large'; // 保持大容器外觀
+      wrapper.style.display = 'grid';
+      wrapper.style.gridTemplateColumns = 'repeat(2, 1fr)';
+      wrapper.style.gridTemplateRows = 'repeat(2, 1fr)';
+      wrapper.style.gap = '5px';
+      
+      // 新增 4 個小播放器在原本大播放器位置
+      for (let i = 0; i < 4; i++) {
+        const newWrapper = document.createElement('div');
+        newWrapper.className = 'stream-wrapper bottom-small';
+        showVideo(newWrapper, videoId, savedSlots.length); // 用新的索引
+        wrapper.appendChild(newWrapper);
+        savedSlots.push(videoId); // 儲存新的小播放器
+      }
+
+      // 原本大播放器位置清空
+      savedSlots[index] = '';
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedSlots));
+    }
+
+
+    function enterInputMode(wrapper, index) {
+      wrapper.innerHTML = '';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'close-button';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => resetSlot(wrapper, index);
+
+      const inputContainer = document.createElement('div');
+      inputContainer.className = 'stream-input';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = '輸入 YouTube 影片/直播網址並按 Enter';
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const url = input.value.trim();
+          const id = extractYouTubeID(url);
+          if (!id) { alert('無法解析這個 YouTube 連結'); return; }
+          showVideo(wrapper, id, index);
+        }
+      });
+
+      inputContainer.appendChild(input);
+      wrapper.appendChild(closeBtn);
+      wrapper.appendChild(inputContainer);
+    }
+
+    function showVideo(wrapper, videoId, index) {
+      wrapper.classList.add('active');
+      wrapper.innerHTML = '';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'close-button';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => resetSlot(wrapper, index);
+      wrapper.appendChild(closeBtn);
+
+      const chatBtn = document.createElement('button');
+      chatBtn.className = 'chat-button';
+      chatBtn.textContent = '💬 聊天';
+      chatBtn.onclick = () => openChat(videoId);
+      wrapper.appendChild(chatBtn);
+
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
+      iframe.frameBorder = "0";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.referrerPolicy = "strict-origin-when-cross-origin";
+      wrapper.appendChild(iframe);
+
+      savedSlots[index] = videoId;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedSlots));
+    }
+
+    function resetSlot(wrapper, index) {
+      wrapper.classList.remove('active');
+      wrapper.innerHTML = '';
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-button';
+      addBtn.textContent = '+';
+      addBtn.onclick = () => enterInputMode(wrapper, index);
+      wrapper.appendChild(addBtn);
+
+      savedSlots[index] = '';
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedSlots));
+    }
+
+    function extractYouTubeID(url) {
+      const match = url.match(/(?:v=|youtu\.be\/|embed\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    // 聊天彈窗邏輯
+    function openChat(videoId) {
+      const existingPopup = document.querySelector('.chat-popup');
+      if (existingPopup) {
+        existingPopup.remove();
+      }
+      const popup = document.createElement('div');
+      popup.className = 'chat-popup';
+      popup.innerHTML = `
+        <button class="chat-close">✕</button>
+        <iframe src="https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}"></iframe>
+      `;
+      document.body.appendChild(popup);
+
+      const close = popup.querySelector('.chat-close');
+      const removePopup = () => popup.remove();
+      close.onclick = removePopup;
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') removePopup();
+      }, { once: true });
+    }
+
+    window.onload = buildUI;
+    
+    // 時鐘更新（只顯示時:分）
+    function updateClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const el = document.getElementById('topClock');
+      if (el) el.textContent = `${hh}:${mm}`;
+    }
+
+    // 先更新一次，之後每秒 (可改為每分鐘) 更新
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+    <head>
+        <meta charset="UTF-8">
+        <title>Exam Page</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech&display=swap">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+        <style>
+            html, body {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                height: 100%;
+                width: 100%;
+                scrollbar-width: none;
+            }
+
+            .bg{
+                background-image:
+                    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+                    url("https://loremflickr.com/1920/1080/nature");
+                background-size: cover;
+                background-position: center;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+            }
+
+            .content {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                min-height: 100vh;
+                padding: 10px 50px;
+                box-sizing: border-box;
+
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                gap: 30px;
+            }
+            .clock {
+                display: flex;
+                position: relative;
+                z-index: 1;
+
+                background: rgba(255, 255, 255, 0.158);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+
+                border-radius: 30px;
+
+                width: fit-content;
+                height: fit-content;
+
+                padding: 10px 25px;
+                margin-top: 20px;
+
+                font-family: 'Share Tech', sans-serif;
+                font-size: 10em;
+                color: white;
+                text-shadow: 2px 2px 2px black;
+                text-align: center;
+                line-height: 1;
+            }
+
+            .schedules {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: start;
+
+                background: rgba(255, 255, 255, 0.192);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 30px;
+
+                width: fit-content;
+                height: fit-content;
+                
+                padding: 30px 30px;     /* 增加內邊距 */
+                gap:10px
+            }
+            .schedule {
+                font-family: 'Share Tech', sans-serif;
+                font-size: 6.8em;
+                color: white;
+                text-align: left;
+                z-index: 1;
+                position: relative;
+                margin: 0;              /* 確保沒有額外的 margin */
+                line-height: 1.2;       /* 調整行高 */
+                margin: 0 20px;
+            }
+
+            .settings-btn {
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 2;
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+            .settings-popup {
+                position: fixed;
+                left: 80px;
+                top: 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.3);
+                z-index: 3;
+                display: none;
+                width: 300px;
+                max-height: 700px;
+                overflow-y: auto; /* 允許垂直滾動 */
+            }
+            .settings-popup.show {
+                display: block;
+            }
+            .settings-popup h3 {
+                margin: 0 0 15px 0;
+                color: #333;
+            }
+            .schedule-item {
+                margin-bottom: 15px;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+            .schedule-item input {
+                margin: 5px 0;
+                padding: 5px;
+                width: 80px;
+            }
+            .schedule-item input[type="text"] {
+                width: 150px;
+            }
+            .settings-btn .material-icons {
+                color: white;
+                font-size: 30px;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="bg"></div>
+        <div class="content">
+            <div class="clock" id="time"></div>
+
+            <div class="schedules">
+                <div id="p1" class="schedule"></div>
+                <div id="p2" class="schedule"></div>
+                <div id="p3" class="schedule"></div>
+                <div id="p4" class="schedule"></div>
+                <div id="p5" class="schedule"></div>
+                <div id="p6" class="schedule"></div>
+                <div id="p7" class="schedule"></div>
+            </div>
+        </div>
+
+        <div class="settings-btn">
+            <span class="material-icons">settings</span>
+        </div>
+
+        <div class="settings-popup">
+            <h3>時間表設定</h3>
+            <div id="schedule-settings"></div>
+        </div>
+
+        <script>
+            let now , hours, minutes;
+            let schedules0 = [
+                    { id: 'p1', start: { h: 8, m: 0 }, end: { h: 9, m: 10 }, text: '化學',original:false},
+                    { id: 'p2', start: { h: 9, m: 25 }, end: { h: 10, m: 15 }, text: '英聽',original:false },
+                    { id: 'p3', start: { h: 10, m: 45 }, end: { h: 11, m: 55 }, text: '生科',original:false },
+                    { id: 'p4', start: { h: 13, m: 30 }, end: { h: 14, m: 40 }, text: '公民',original:false },
+                    { id: 'p5', start: { h: 14, m: 55 }, end: { h: 14, m: 30 }, text: '英文',original:false },
+                    { id: 'p6', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false },
+                    { id: 'p7', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false }
+                ];
+
+            
+            let schedules1 = [
+                    { id: 'p1', start: { h: 8, m: 0 }, end: { h: 9, m: 10 }, text: '地理',original:false},
+                    { id: 'p2', start: { h: 9, m: 25 }, end: { h: 10, m: 15 }, text: '自習',original:false },
+                    { id: 'p3', start: { h: 10, m: 45 }, end: { h: 11, m: 55 }, text: '生物',original:false },
+                    { id: 'p4', start: { h: 13, m: 30 }, end: { h: 14, m: 40 }, text: '歷史',original:false },
+                    { id: 'p5', start: { h: 14, m: 55 }, end: { h: 14, m: 30 }, text: '國文',original:false },
+                    { id: 'p6', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false },
+                    { id: 'p7', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false }
+                ];
+            let schedules2 = [
+                    { id: 'p1', start: { h: 8, m: 0 }, end: { h: 9, m: 10 }, text: '數學',original:false },
+                    { id: 'p2', start: { h: 9, m: 25 }, end: { h: 10, m: 15 }, text: '自習',original:false },
+                    { id: 'p3', start: { h: 10, m: 45 }, end: { h: 11, m: 55 }, text: '體育&藝術',original:false },
+                    { id: 'p4', start: { h: 13, m: 30 }, end: { h: 14, m: 40 }, text: '',original:false },
+                    { id: 'p5', start: { h: 14, m: 55 }, end: { h: 14, m: 30 }, text: '',original:false },
+                    { id: 'p6', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false },
+                    { id: 'p7', start: { h: 0, m: 0 }, end: { h: 0, m: 0 }, text: '',original:false }
+                ];
+                
+            let using_schedules = schedules0;             
+
+            function updateClock() {
+                now = new Date();
+                hours = now.getHours();
+                minutes = now.getMinutes();
+
+                const timeElement = document.getElementById('time');
+                timeElement.innerHTML = `${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')}`;
+            }
+
+            function updateSchedule() {
+                now = new Date();
+                hours = now.getHours();
+                minutes = now.getMinutes();
+
+                using_schedules.forEach(schedule => {
+                    const element = document.getElementById(schedule.id);
+                    if (schedule.text === '') {
+                        element.textContent = '';
+                        return;
+                    }
+
+                    const inTime =
+                        (hours > schedule.start.h || (hours === schedule.start.h && minutes >= schedule.start.m)) &&
+                        (hours < schedule.end.h || (hours === schedule.end.h && minutes < schedule.end.m));
+
+                    const startStr = `${schedule.start.h.toString().padStart(2, '0')}:${schedule.start.m.toString().padStart(2, '0')}`;
+                    const endStr = `${schedule.end.h.toString().padStart(2, '0')}:${schedule.end.m.toString().padStart(2, '0')}`;
+
+                    // 時間區間的顏色在考試中時變黃色
+                    const timeColor = inTime ? '#eff781' : '#ffffff';
+
+                    element.innerHTML = `
+                        <span style="color:${timeColor}">
+                            ${startStr} - ${endStr}&nbsp;${schedule.text}
+                        </span>
+                        ${schedule.original ? '<span style="color:#cdfffd; font-size:0.5em; margin-left: -20px;">原</span>' : ''}
+                    `;
+                });
+            }
+
+
+            // 設定按鈕功能
+            const settingsBtn = document.querySelector('.settings-btn');
+            const settingsPopup = document.querySelector('.settings-popup');
+            const scheduleSettings = document.getElementById('schedule-settings');
+
+            // 產生設定表單
+            function generateSettingsForm() {
+                scheduleSettings.innerHTML = using_schedules.map((schedule, index) => `
+                    <div class="schedule-item">
+                        <div>
+                            開始時間：
+                            <input type="number" min="0" max="23" value="${schedule.start.h}" 
+                                   onchange="updateScheduleTime(${index}, 'start', 'h', this.value)"> :
+                            <input type="number" min="0" max="59" value="${schedule.start.m}" 
+                                   onchange="updateScheduleTime(${index}, 'start', 'm', this.value)">
+                        </div>
+                        <div>
+                            結束時間：
+                            <input type="number" min="0" max="23" value="${schedule.end.h}" 
+                                   onchange="updateScheduleTime(${index}, 'end', 'h', this.value)"> :
+                            <input type="number" min="0" max="59" value="${schedule.end.m}" 
+                                   onchange="updateScheduleTime(${index}, 'end', 'm', this.value)">
+                        </div>
+                        <div>
+                            科目名稱：
+                            <input type="text" value="${schedule.text}" 
+                                   onchange="updateScheduleText(${index}, this.value)">
+                        </div>
+                        <div>
+                            原班考試：
+                            <input type="checkbox" ${schedule.original ? 'checked' : ''} 
+                                   onchange="updateScheduleOriginal(${index}, this.checked)">
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 更新時間
+            function updateScheduleTime(index, type, unit, value) {
+                value = parseInt(value);
+                if (type === 'start') {
+                    using_schedules[index].start[unit] = value;
+                } else {
+                    using_schedules[index].end[unit] = value;
+                }
+                updateSchedule();
+            }
+
+            // 更新科目名稱
+            function updateScheduleText(index, value) {
+                using_schedules[index].text = value;
+                updateSchedule();
+            }
+
+            // 更新原班考試
+            function updateScheduleOriginal(index, value) {
+                using_schedules[index].original = value;
+                updateSchedule();
+            }
+
+            // 切換設定視窗
+            settingsBtn.addEventListener('click', () => {
+                settingsPopup.classList.toggle('show');
+                if (settingsPopup.classList.contains('show')) {
+                    generateSettingsForm();
+                }
+            });
+
+            // 點擊外部關閉設定視窗
+            document.addEventListener('click', (e) => {
+                if (!settingsPopup.contains(e.target) && !settingsBtn.contains(e.target)) {
+                    settingsPopup.classList.remove('show');
+                }
+            });
+
+            setInterval(() => {
+                updateClock();
+                updateSchedule();
+            }, 1000);
+
+        </script>
+    </body>
+</html>
+
+
+
