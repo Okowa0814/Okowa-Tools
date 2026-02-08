@@ -5,20 +5,29 @@
 <title>多直播觀看工具 Made by Okowa</title>
 
 <style>
-body {
+/* ===== 全域 ===== */
+html, body {
   margin: 0;
-  padding: 16px;
+  padding: 0;
   background: #000;
   color: #eee;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
+/* ===== 容器 ===== */
 #allStreamsContainer {
   max-width: 1600px;
   margin: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .row {
@@ -33,17 +42,8 @@ body {
 #bottomRow {
   grid-template-columns: repeat(4, 1fr);
 }
-  
-@media (orientation: portrait) {
-#topRow {
-  grid-template-columns: 1fr; /* 大的直排 */
-}
 
-#bottomRow {
-  grid-template-columns: repeat(2, 1fr); /* 小的 2 欄 */
-}
-}
-
+/* ===== 播放器 ===== */
 .stream-wrapper {
   position: relative;
   background: #2c2c2c;
@@ -60,21 +60,22 @@ body {
   border: none;
 }
 
+/* ===== 空格 ===== */
 .add-button {
   position: absolute;
   inset: 0;
-  border: 2px dashed #666;
   background: none;
+  border: 2px dashed #666;
   color: #aaa;
   font-size: 32px;
   cursor: pointer;
 }
-
 .add-button:hover {
   border-color: #fff;
   color: #fff;
 }
 
+/* ===== 控制 ===== */
 .control {
   position: absolute;
   top: 6px;
@@ -87,13 +88,58 @@ body {
 }
 
 .close-btn { right: 6px; background: #ff5555; color: #fff; }
+.chat-btn  { right: 42px; background: #444; color: #fff; }
 .split-btn { left: 6px; background: #444; color: #fff; }
 
+/* ===== 四分割 ===== */
 .quad {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 6px;
+}
+
+/* ===== 聊天室 ===== */
+.chat-popup {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 380px;
+  height: 600px;
+  background: rgba(20,20,20,.96);
+  border: 1px solid #555;
+  border-radius: 10px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,.6);
+}
+
+.chat-popup iframe {
+  flex: 1;
+  border: none;
+}
+
+.chat-close {
+  align-self: flex-end;
+  margin: 6px;
+  padding: 4px 10px;
+  background: #ff5555;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ===== 直向 ===== */
+@media (orientation: portrait) {
+  #topRow {
+    grid-template-columns: 1fr;
+  }
+  #bottomRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
 </head>
@@ -106,52 +152,42 @@ body {
 </div>
 
 <script>
-const STORAGE_KEY = 'multiLiveLayout_v3';
+const STORAGE_KEY = 'multiLive_final_v1';
 const topRow = document.getElementById('topRow');
 const bottomRow = document.getElementById('bottomRow');
 
 let layout = { top: 2, bottom: 4 };
 let slots = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
+/* ===== 儲存 ===== */
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
 }
 
+/* ===== 版面切換 ===== */
 function updateLayout() {
-  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-
-  if (isPortrait) {
-    layout = { top: 2, bottom: 8 };
-    bottomRow.style.gridTemplateColumns = 'repeat(2, 1fr)';
-  } else {
-    layout = { top: 2, bottom: 4 };
-    bottomRow.style.gridTemplateColumns = 'repeat(4, 1fr)';
-  }
-
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  layout = portrait ? { top: 2, bottom: 8 } : { top: 2, bottom: 4 };
   buildUI();
 }
 
-
+/* ===== UI ===== */
 function buildUI() {
   topRow.innerHTML = '';
   bottomRow.innerHTML = '';
 
   const total = layout.top + layout.bottom;
-
-  // ⭐ 關鍵：直向時會補到 10 格（2+8）
-  while (slots.length < total) {
-    slots.push(null);
-  }
+  while (slots.length < total) slots.push(null);
 
   for (let i = 0; i < layout.top; i++) {
     topRow.appendChild(renderSlot(i));
   }
-
   for (let i = layout.top; i < total; i++) {
     bottomRow.appendChild(renderSlot(i));
   }
 }
 
+/* ===== Slot ===== */
 function renderSlot(index) {
   const data = slots[index];
   const box = document.createElement('div');
@@ -179,10 +215,10 @@ function renderSlot(index) {
     });
     addControls(box, index, false);
   }
-
   return box;
 }
 
+/* ===== Iframe ===== */
 function addIframe(box, id) {
   const iframe = document.createElement('iframe');
   iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
@@ -190,6 +226,7 @@ function addIframe(box, id) {
   box.appendChild(iframe);
 }
 
+/* ===== 控制 ===== */
 function addControls(box, index, canSplit) {
   const close = document.createElement('button');
   close.className = 'control close-btn';
@@ -200,6 +237,12 @@ function addControls(box, index, canSplit) {
     buildUI();
   };
   box.appendChild(close);
+
+  const chat = document.createElement('button');
+  chat.className = 'control chat-btn';
+  chat.textContent = '💬';
+  chat.onclick = () => openChat(slots[index].videos[0]);
+  box.appendChild(chat);
 
   if (canSplit) {
     const split = document.createElement('button');
@@ -215,22 +258,46 @@ function addControls(box, index, canSplit) {
   }
 }
 
+/* ===== 輸入 ===== */
 function inputVideo(index) {
-  const url = prompt('輸入 YouTube 影片 / 直播網址');
+  const url = prompt('輸入 YouTube 直播 / 影片網址');
   if (!url) return;
   const id = extractID(url);
-  if (!id) return alert('無法解析 YouTube ID');
-
+  if (!id) return alert('無法解析 YouTube 連結');
   slots[index] = { mode: 'single', videos: [id] };
   save();
   buildUI();
 }
 
+/* ===== ID ===== */
 function extractID(url) {
   const m = url.match(/(?:v=|youtu\.be\/|live\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
+/* ===== 聊天室 ===== */
+function openChat(videoId) {
+  const old = document.querySelector('.chat-popup');
+  if (old) old.remove();
+
+  const popup = document.createElement('div');
+  popup.className = 'chat-popup';
+  popup.innerHTML = `
+    <button class="chat-close">✕</button>
+    <iframe src="https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}"></iframe>
+  `;
+  document.body.appendChild(popup);
+
+  const close = popup.querySelector('.chat-close');
+  const remove = () => popup.remove();
+  close.onclick = remove;
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') remove();
+  }, { once: true });
+}
+
+/* ===== 啟動 ===== */
 window.addEventListener('resize', updateLayout);
 window.onload = updateLayout;
 </script>
