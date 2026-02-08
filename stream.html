@@ -33,6 +33,16 @@ body {
 #bottomRow {
   grid-template-columns: repeat(4, 1fr);
 }
+  
+@media (orientation: portrait) {
+#topRow {
+  grid-template-columns: 1fr; /* 大的直排 */
+}
+
+#bottomRow {
+  grid-template-columns: repeat(2, 1fr); /* 小的 2 欄 */
+}
+}
 
 .stream-wrapper {
   position: relative;
@@ -108,22 +118,35 @@ function save() {
 }
 
 function updateLayout() {
-  const portrait = window.matchMedia('(orientation: portrait)').matches;
-  layout = portrait ? { top: 2, bottom: 8 } : { top: 2, bottom: 4 };
-  bottomRow.style.gridTemplateColumns = portrait ? 'repeat(2,1fr)' : 'repeat(4,1fr)';
+  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+
+  if (isPortrait) {
+    layout = { top: 2, bottom: 8 };
+    bottomRow.style.gridTemplateColumns = 'repeat(2, 1fr)';
+  } else {
+    layout = { top: 2, bottom: 4 };
+    bottomRow.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  }
+
   buildUI();
 }
+
 
 function buildUI() {
   topRow.innerHTML = '';
   bottomRow.innerHTML = '';
 
   const total = layout.top + layout.bottom;
-  while (slots.length < total) slots.push(null);
+
+  // ⭐ 關鍵：直向時會補到 10 格（2+8）
+  while (slots.length < total) {
+    slots.push(null);
+  }
 
   for (let i = 0; i < layout.top; i++) {
     topRow.appendChild(renderSlot(i));
   }
+
   for (let i = layout.top; i < total; i++) {
     bottomRow.appendChild(renderSlot(i));
   }
