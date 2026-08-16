@@ -2,118 +2,137 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>多直播觀看工具 Made by Okowa</title>
 
 <style>
-/* ===== 全域 ===== */
+/* ===== 全域滿版設計 ===== */
+* {
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0;
   padding: 0;
-  background: #000;
+  width: 100vw;
+  height: 100vh;
+  background: #121212;
   color: #eee;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial;
-  overflow-y: scroll;
-  scrollbar-width: none;
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
+  overflow: hidden; /* 滿版不顯示滾動條 */
 }
 
-/* ===== 容器 ===== */
+/* ===== 主容器 ===== */
 #allStreamsContainer {
-  max-width: 1600px;
-  margin: auto;
-  padding: 16px;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.row {
-  display: grid;
   gap: 10px;
 }
 
-#topRow {
+/* 上下兩列，各佔 50% 高度 */
+.row {
+  display: grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  flex: 1;
+  min-height: 0; /* 避免 flex 子項目 overflow */
 }
 
-#bottomRow {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-/* ===== 播放器 ===== */
+/* ===== 播放器外框 ===== */
 .stream-wrapper {
   position: relative;
-  background: #2c2c2c;
-  border-radius: 10px;
+  background: #1f1f1f;
+  border-radius: 8px;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
+  height: 100%;
+  width: 100%;
+  display: flex;
 }
 
 .stream-wrapper iframe {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   border: none;
 }
 
-/* ===== 空格 ===== */
+/* ===== 空白加號按鈕 ===== */
 .add-button {
   position: absolute;
   inset: 0;
-  background: none;
-  border: 2px dashed #666;
-  color: #aaa;
-  font-size: 32px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 2px dashed #444;
+  border-radius: 8px;
+  color: #888;
+  font-size: 36px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .add-button:hover {
-  border-color: #fff;
-  color: #fff;
+  border-color: #3ea6ff;
+  color: #3ea6ff;
+  background: rgba(62, 166, 255, 0.05);
 }
 
-/* ===== 控制 ===== */
-.control {
+/* ===== 分割版面（1大變2小） ===== */
+.split-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  background: #121212;
+}
+
+/* ===== 控制按鈕工具列 ===== */
+.control-bar {
   position: absolute;
   top: 6px;
-  padding: 4px 6px;
-  font-size: 13px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px;
   border-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+.control {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
-  z-index: 5;
+  color: #fff;
+  transition: background 0.2s;
 }
 
-.close-btn { right: 6px; background: #ff5555; color: #fff; }
-.chat-btn  { right: 42px; background: #444; color: #fff; }
-.split-btn { left: 6px; background: #444; color: #fff; }
+.close-btn { background: #e53935; }
+.close-btn:hover { background: #c62828; }
 
-/* ===== 四分割 ===== */
-.quad {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 6px;
-}
+.chat-btn  { background: #333; }
+.chat-btn:hover { background: #555; }
 
-/* ===== 聊天室 ===== */
+.split-btn { background: #2f80ed; }
+.split-btn:hover { background: #1d66c9; }
+
+/* ===== 聊天室彈出視窗 ===== */
 .chat-popup {
   position: fixed;
-  top: 80px;
+  top: 60px;
   right: 20px;
-  width: 380px;
-  height: 600px;
-  background: rgba(20,20,20,.96);
-  border: 1px solid #555;
-  border-radius: 10px;
+  width: 360px;
+  height: calc(100vh - 80px);
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid #444;
+  border-radius: 8px;
   z-index: 999;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 0 20px rgba(0,0,0,.6);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
 }
 
 .chat-popup iframe {
@@ -121,25 +140,23 @@ body::-webkit-scrollbar {
   border: none;
 }
 
-.chat-close {
-  align-self: flex-end;
-  margin: 6px;
-  padding: 4px 10px;
-  background: #ff5555;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  font-size: 13px;
+  font-weight: bold;
 }
 
-/* ===== 直向 ===== */
-@media (orientation: portrait) {
-  #topRow {
-    grid-template-columns: 1fr;
-  }
-  #bottomRow {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.chat-close {
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -152,130 +169,187 @@ body::-webkit-scrollbar {
 </div>
 
 <script>
-const STORAGE_KEY = 'multiLive_final_v1';
+const STORAGE_KEY = 'multiLive_4grid_v2';
 const topRow = document.getElementById('topRow');
 const bottomRow = document.getElementById('bottomRow');
 
-let layout = { top: 2, bottom: 4 };
-let slots = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+// 初始化資料結構：共 4 個大 Slot (0,1 為上，2,3 為下)
+// 資料範例：
+// 單一影片: { mode: 'single', videos: ['id'] }
+// 雙影片(拆分): { mode: 'split', videos: ['id1', 'id2'] }
+let slots = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [null, null, null, null];
 
-/* ===== 儲存 ===== */
+/* ===== 儲存狀態 ===== */
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
 }
 
-/* ===== 版面切換 ===== */
-function updateLayout() {
-  const portrait = window.matchMedia('(orientation: portrait)').matches;
-  layout = portrait ? { top: 2, bottom: 8 } : { top: 2, bottom: 4 };
-  buildUI();
-}
-
-/* ===== UI ===== */
+/* ===== 初始化 UI ===== */
 function buildUI() {
   topRow.innerHTML = '';
   bottomRow.innerHTML = '';
 
-  const total = layout.top + layout.bottom;
-  while (slots.length < total) slots.push(null);
+  // 確保陣列長度為 4
+  while (slots.length < 4) slots.push(null);
 
-  for (let i = 0; i < layout.top; i++) {
-    topRow.appendChild(renderSlot(i));
+  // 渲染上方 2 個大 Slot
+  for (let i = 0; i < 2; i++) {
+    topRow.appendChild(renderSlot(i, false));
   }
-  for (let i = layout.top; i < total; i++) {
-    bottomRow.appendChild(renderSlot(i));
+  // 渲染下方 2 個大 Slot (可支援變 2 個小的按鈕)
+  for (let i = 2; i < 4; i++) {
+    bottomRow.appendChild(renderSlot(i, true));
   }
 }
 
-/* ===== Slot ===== */
-function renderSlot(index) {
+/* ===== 渲染單個 Slot ===== */
+function renderSlot(index, isBottom) {
   const data = slots[index];
   const box = document.createElement('div');
   box.className = 'stream-wrapper';
 
+  // 空 Slot
   if (!data) {
     const add = document.createElement('button');
     add.className = 'add-button';
     add.textContent = '+';
-    add.onclick = () => inputVideo(index);
+    add.onclick = () => inputVideo(index, 0);
     box.appendChild(add);
     return box;
   }
 
+  // 模式 1：單一大播放器
   if (data.mode === 'single') {
-    addIframe(box, data.videos[0]);
-    addControls(box, index, true);
-  } else {
-    box.classList.add('quad');
-    data.videos.forEach(v => {
-      const cell = document.createElement('div');
-      cell.className = 'stream-wrapper';
-      addIframe(cell, v);
-      box.appendChild(cell);
+    if (data.videos[0]) {
+      addIframe(box, data.videos[0]);
+    } else {
+      const add = document.createElement('button');
+      add.className = 'add-button';
+      add.textContent = '+';
+      add.onclick = () => inputVideo(index, 0);
+      box.appendChild(add);
+    }
+    addControls(box, index, 0, isBottom, false);
+  } 
+  // 模式 2：拆分為 2 個小播放器
+  else if (data.mode === 'split') {
+    box.classList.add('split-wrapper');
+    
+    [0, 1].forEach(subIndex => {
+      const subBox = document.createElement('div');
+      subBox.className = 'stream-wrapper';
+      const videoId = data.videos[subIndex];
+
+      if (videoId) {
+        addIframe(subBox, videoId);
+      } else {
+        const add = document.createElement('button');
+        add.className = 'add-button';
+        add.textContent = '+';
+        add.onclick = () => inputVideo(index, subIndex);
+        subBox.appendChild(add);
+      }
+      addControls(subBox, index, subIndex, isBottom, true);
+      box.appendChild(subBox);
     });
-    addControls(box, index, false);
   }
+
   return box;
 }
 
-/* ===== Iframe ===== */
+/* ===== 嵌入 YouTube Iframe ===== */
 function addIframe(box, id) {
   const iframe = document.createElement('iframe');
   iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
-  iframe.allow = 'autoplay';
+  iframe.allow = 'autoplay; encrypted-media';
   box.appendChild(iframe);
 }
 
-/* ===== 控制 ===== */
-function addControls(box, index, canSplit) {
-  const close = document.createElement('button');
-  close.className = 'control close-btn';
-  close.textContent = '✕';
-  close.onclick = () => {
-    slots[index] = null;
-    save();
-    buildUI();
-  };
-  box.appendChild(close);
+/* ===== 加入控制按鈕 ===== */
+function addControls(box, index, subIndex, isBottom, isSplitMode) {
+  const bar = document.createElement('div');
+  bar.className = 'control-bar';
 
-  const chat = document.createElement('button');
-  chat.className = 'control chat-btn';
-  chat.textContent = '💬';
-  chat.onclick = () => openChat(slots[index].videos[0]);
-  box.appendChild(chat);
-
-  if (canSplit) {
-    const split = document.createElement('button');
-    split.className = 'control split-btn';
-    split.textContent = '⧉';
-    split.onclick = () => {
-      const id = slots[index].videos[0];
-      slots[index] = { mode: 'quad', videos: [id, id, id, id] };
+  // 下方區域可切換「1大 / 2小」的按鈕
+  if (isBottom && subIndex === 0) {
+    const toggleSplit = document.createElement('button');
+    toggleSplit.className = 'control split-btn';
+    toggleSplit.textContent = isSplitMode ? '單一模式' : '◫ 拆分 2 小';
+    toggleSplit.onclick = (e) => {
+      e.stopPropagation();
+      if (isSplitMode) {
+        // 切回單一大播放器
+        slots[index] = { mode: 'single', videos: [slots[index].videos[0] || null] };
+      } else {
+        // 切換成拆分 2 小
+        const currentId = slots[index].videos[0] || null;
+        slots[index] = { mode: 'split', videos: [currentId, null] };
+      }
       save();
       buildUI();
     };
-    box.appendChild(split);
+    bar.appendChild(toggleSplit);
   }
+
+  // 聊天室按鈕
+  if (slots[index]?.videos[subIndex]) {
+    const chat = document.createElement('button');
+    chat.className = 'control chat-btn';
+    chat.textContent = '💬';
+    chat.onclick = (e) => {
+      e.stopPropagation();
+      openChat(slots[index].videos[subIndex]);
+    };
+    bar.appendChild(chat);
+  }
+
+  // 關閉 / 清除按鈕
+  const close = document.createElement('button');
+  close.className = 'control close-btn';
+  close.textContent = '✕';
+  close.onclick = (e) => {
+    e.stopPropagation();
+    if (isSplitMode) {
+      // 拆分模式下清空該小播放器，若兩個都空了則還原 Slot
+      slots[index].videos[subIndex] = null;
+      if (!slots[index].videos[0] && !slots[index].videos[1]) {
+        slots[index] = null;
+      }
+    } else {
+      slots[index] = null;
+    }
+    save();
+    buildUI();
+  };
+  bar.appendChild(close);
+
+  box.appendChild(bar);
 }
 
-/* ===== 輸入 ===== */
-function inputVideo(index) {
-  const url = prompt('輸入 YouTube 直播 / 影片網址');
+/* ===== 輸入影片連結 ===== */
+function inputVideo(index, subIndex = 0) {
+  const url = prompt('請輸入 YouTube 直播 / 影片網址:');
   if (!url) return;
   const id = extractID(url);
-  if (!id) return alert('無法解析 YouTube 連結');
-  slots[index] = { mode: 'single', videos: [id] };
+  if (!id) return alert('無法解析此 YouTube 連結，請重新確認！');
+
+  if (!slots[index]) {
+    slots[index] = { mode: 'single', videos: [id] };
+  } else {
+    slots[index].videos[subIndex] = id;
+  }
+
   save();
   buildUI();
 }
 
-/* ===== ID ===== */
+/* ===== 解析 YouTube Video ID ===== */
 function extractID(url) {
   const m = url.match(/(?:v=|youtu\.be\/|live\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
-/* ===== 聊天室 ===== */
+/* ===== 開啟聊天室 ===== */
 function openChat(videoId) {
   const old = document.querySelector('.chat-popup');
   if (old) old.remove();
@@ -283,23 +357,24 @@ function openChat(videoId) {
   const popup = document.createElement('div');
   popup.className = 'chat-popup';
   popup.innerHTML = `
-    <button class="chat-close">✕</button>
+    <div class="chat-header">
+      <span>聊天室 (ID: ${videoId})</span>
+      <button class="chat-close">✕</button>
+    </div>
     <iframe src="https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}"></iframe>
   `;
   document.body.appendChild(popup);
 
-  const close = popup.querySelector('.chat-close');
-  const remove = () => popup.remove();
-  close.onclick = remove;
+  const closeBtn = popup.querySelector('.chat-close');
+  closeBtn.onclick = () => popup.remove();
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') remove();
+    if (e.key === 'Escape') popup.remove();
   }, { once: true });
 }
 
-/* ===== 啟動 ===== */
-window.addEventListener('resize', updateLayout);
-window.onload = updateLayout;
+// 頁面載入時初始化
+window.onload = buildUI;
 </script>
 
 </body>
